@@ -4,6 +4,7 @@ from pymongo import MongoClient
 from datetime import datetime
 import time
 import configparser
+import threading
 
 # Load configuration from config.ini file
 config = configparser.ConfigParser()
@@ -51,16 +52,22 @@ def process_new_objects():
         
         update_latest_timestamp(obj['timestamp'])
 
+def run_process_new_objects():
+    """Wrapper function to run process_new_objects in a separate thread."""
+    while True:
+        process_new_objects()
+        time.sleep(config.getint('Redis', 'redis_sleep_time'))
+
 def main():
-    """Main function to continuously process new objects."""
+    """Main function to start the thread."""
+    thread = threading.Thread(target=run_process_new_objects)
+    thread.start()
+
     try:
-        while True:
-            process_new_objects()
-            time.sleep(config.getint('Redis', 'redis_sleep_time'))
+        thread.join()
     except KeyboardInterrupt:
         print("Exiting...")
-    except Exception as e:
-        print(f"An error occurred: {e}")
+        thread.join()
 
 if __name__ == "__main__":
     main()
